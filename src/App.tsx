@@ -3,9 +3,10 @@ import { MantineProvider } from '@mantine/core';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Login } from './pages/Login';
-import { WorkerDashboard } from './pages/WorkerDashboard';
+import { WorkerDashboard } from './pages/workerDashboard';
 import { AdminDashboard } from './pages/adminDashboard';
 import { ClientDashboard } from './pages/clientDashboard';
+import { Signup } from './pages/signUp';
 
 // Helper component to check permissions
 const RoleGuard = ({ component: Component, role }: { component: React.FC, role: string }) => {
@@ -26,6 +27,7 @@ export default function App() {
           <Routes>
             {/* PUBLIC */}
             <Route path="/login" element={<Login />} />
+            <Route path="/signup" element={<Signup />} />
 
             {/* PROTECTED WORKER */}
             <Route path="/worker" element={<RoleGuard component={WorkerDashboard} role="WORKER" />} />

@@ -4,9 +4,9 @@ import {
   Group, Timeline, ThemeIcon, Checkbox, Paper, Loader 
 } from '@mantine/core';
 import { IconScan, IconClock, IconMapPin, IconCheck } from '@tabler/icons-react';
-import { Scanner } from '../features/care/Scanner';
-import { useFetch, usePut, usePost } from '../hooks/useApi';
-import type { CareTask } from '../types';
+import { Scanner } from '../../features/care/Scanner';
+import { useFetch, usePut, usePost } from '../../hooks/useApi';
+import type { CareTask } from '../../types';
 
 export function WorkerDashboard() {
   const [showScanner, setShowScanner] = useState(false);
