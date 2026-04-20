@@ -1,34 +1,33 @@
+import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { AuthProvider } from './hooks/useAuth';
+import { ProtectedRoute } from './components/ProtectedRoute';
+import { Login } from './pages/Login';
 import { Scanner } from './features/care/Scanner';
-import { LayoutDashboard, UserCheck, Settings } from 'lucide-react';
 
-function App() {
+export default function App() {
   return (
-    <div className="min-h-screen bg-slate-50 pb-20">
-      <header className="bg-white p-4 shadow-sm border-b sticky top-0 z-10">
-        <h1 className="text-blue-600 font-extrabold text-2xl tracking-tight">SafeStay</h1>
-      </header>
+    <AuthProvider>
+      <BrowserRouter>
+        <Routes>
+          <Route path="/login" element={<Login />} />
+          
+          {/* Worker Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['WORKER']} />}>
+            <Route path="/worker" element={<Scanner />} />
+          </Route>
 
-      <main className="max-w-md mx-auto py-6">
-        <Scanner onVerified={(data) => console.log("Verify this in FastAPI:", data)} />
-      </main>
+          {/* Client & Admin Mock Routes */}
+          <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
+            <Route path="/client" element={<div className="p-10">Client Dashboard</div>} />
+          </Route>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t flex justify-around p-3 shadow-[0_-2px_10px_rgba(0,0,0,0.05)]">
-        <button className="flex flex-col items-center text-blue-600">
-          <LayoutDashboard size={24} />
-          <span className="text-[10px] font-bold">Today</span>
-        </button>
-        <button className="flex flex-col items-center text-slate-400">
-          <UserCheck size={24} />
-          <span className="text-[10px] font-bold">Patients</span>
-        </button>
-        <button className="flex flex-col items-center text-slate-400">
-          <Settings size={24} />
-          <span className="text-[10px] font-bold">Settings</span>
-        </button>
-      </nav>
-    </div>
+          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
+            <Route path="/admin" element={<div className="p-10">Admin Control Panel</div>} />
+          </Route>
+
+          <Route path="/" element={<Navigate to="/login" />} />
+        </Routes>
+      </BrowserRouter>
+    </AuthProvider>
   );
 }
-
-export default App;

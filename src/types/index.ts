@@ -1,3 +1,12 @@
+export type UserRole = 'ADMIN' | 'CLIENT' | 'WORKER';
+
+export interface User {
+  id: string;
+  name: string;
+  role: UserRole;
+  token: string;
+}
+
 export interface LocationCoords {
   lat: number;
   lng: number;
