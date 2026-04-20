@@ -1,9 +1,10 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import type { User, UserRole } from '../types';
+
+export interface User { id: string; name: string; role: string; token: string; }
 
 interface AuthContextType {
   user: User | null;
-  login: (userData: User) => void;
+  login: (data: User) => void;
   logout: () => void;
   isLoading: boolean;
 }
@@ -15,14 +16,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    const savedUser = localStorage.getItem('safestay_user');
-    if (savedUser) setUser(JSON.parse(savedUser));
+    const saved = localStorage.getItem('safestay_user');
+    if (saved) {
+      try {
+        setUser(JSON.parse(saved));
+      } catch (e) {
+        localStorage.removeItem('safestay_user');
+      }
+    }
     setIsLoading(false);
   }, []);
 
-  const login = (userData: User) => {
-    setUser(userData);
-    localStorage.setItem('safestay_user', JSON.stringify(userData));
+  const login = (data: User) => {
+    setUser(data);
+    localStorage.setItem('safestay_user', JSON.stringify(data));
   };
 
   const logout = () => {

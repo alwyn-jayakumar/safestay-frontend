@@ -26,3 +26,11 @@ export interface PatientSession {
   requiredCoords: LocationCoords;
   tasks: Task[];
 }
+
+export interface CareTask {
+  id: number;
+  title: string;
+  description: string;
+  isCompleted: boolean;
+  timeSlot: string;
+}

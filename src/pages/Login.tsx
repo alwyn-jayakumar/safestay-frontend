@@ -1,52 +1,74 @@
-import { useState } from 'react';
-import { useAuth } from '../hooks/useAuth';
+import { useFormik } from 'formik';
+import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
-import type { UserRole } from '../types';
+import { useAuth } from '../hooks/useAuth'; // Using the context we just made
+import { TextInput, PasswordInput, Button, Paper, Title, Container, Select, Stack } from '@mantine/core';
 
-export const Login = () => {
-  const [email, setEmail] = useState('');
-  const [role, setRole] = useState<UserRole>('WORKER');
+export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
 
-  const handleLogin = (e: React.FormEvent) => {
-    e.preventDefault();
-    // MOCK LOGIN - Replace with actual API call to FastAPI
-    login({ id: '1', name: 'User', role, token: 'mock-jwt-token' });
-    
-    if (role === 'WORKER') navigate('/worker');
-    else if (role === 'CLIENT') navigate('/client');
-    else navigate('/admin');
-  };
+  const formik = useFormik({
+    initialValues: { email: '', password: '', role: 'WORKER' },
+    validationSchema: Yup.object({
+      email: Yup.string().email('Invalid email').required('Required'),
+      password: Yup.string().required('Required'),
+      role: Yup.string().required('Required'),
+    }),
+    onSubmit: async (values) => {
+      // 1. In production, call your FastAPI here:
+      // const response = await apiClient.post('/auth/login', values);
+      
+      // 2. For now, we mock the successful response from your MSSQL/FastAPI
+      const mockUser = { 
+        id: '101', 
+        name: 'Vijay', 
+        role: values.role, 
+        token: 'ey-your-jwt-token-from-fastapi' 
+      };
+
+      login(mockUser); // This updates the state globally
+
+      // 3. Logic-based redirection
+      if (values.role === 'WORKER') navigate('/worker');
+      else if (values.role === 'ADMIN') navigate('/admin');
+      else navigate('/client');
+    },
+  });
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-slate-50 px-4">
-      <form onSubmit={handleLogin} className="bg-white p-8 rounded-2xl shadow-xl w-full max-w-md">
-        <h1 className="text-3xl font-black text-blue-600 mb-6 text-center">SafeStay</h1>
-        
-        <div className="mb-4">
-          <label className="block text-sm font-bold text-gray-700 mb-2">I am a:</label>
-          <select 
-            value={role} 
-            onChange={(e) => setRole(e.target.value as UserRole)}
-            className="w-full p-3 border rounded-xl bg-gray-50 focus:ring-2 focus:ring-blue-500 outline-none"
-          >
-            <option value="WORKER">Caregiver (Worker)</option>
-            <option value="CLIENT">Family (Client)</option>
-            <option value="ADMIN">Administrator</option>
-          </select>
-        </div>
-
-        <input 
-          type="email" placeholder="Email" required
-          className="w-full p-3 mb-4 border rounded-xl outline-none focus:ring-2 focus:ring-blue-500"
-          value={email} onChange={(e) => setEmail(e.target.value)}
-        />
-        
-        <button type="submit" className="w-full bg-blue-600 text-white p-3 rounded-xl font-bold hover:bg-blue-700 transition">
-          Sign In
-        </button>
-      </form>
-    </div>
+    <Container size={420} my={80}>
+      <Paper withBorder shadow="md" p={30} radius="md">
+        <Title ta="center" order={2} mb="lg">SafeStay Login</Title>
+        <form onSubmit={formik.handleSubmit}>
+          <Stack>
+            <Select
+              label="User Role"
+              placeholder="Pick one"
+              data={[
+                { value: 'WORKER', label: 'Caregiver (Worker)' },
+                { value: 'CLIENT', label: 'Family (Client)' },
+                { value: 'ADMIN', label: 'Administrator' },
+              ]}
+              // Use value and onChange manually for Mantine + Formik
+              value={formik.values.role}
+              onChange={(value) => formik.setFieldValue('role', value)}
+              error={formik.touched.role && formik.errors.role}
+            />
+            <TextInput
+              label="Email"
+              {...formik.getFieldProps('email')}
+              error={formik.touched.email && formik.errors.email}
+            />
+            <PasswordInput
+              label="Password"
+              {...formik.getFieldProps('password')}
+              error={formik.touched.password && formik.errors.password}
+            />
+            <Button type="submit" fullWidth mt="md">Login</Button>
+          </Stack>
+        </form>
+      </Paper>
+    </Container>
   );
-};
+}

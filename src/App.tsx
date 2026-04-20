@@ -1,33 +1,42 @@
+import '@mantine/core/styles.css';
+import { MantineProvider } from '@mantine/core';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './hooks/useAuth';
-import { ProtectedRoute } from './components/ProtectedRoute';
+import { AuthProvider, useAuth } from './hooks/useAuth';
 import { Login } from './pages/Login';
-import { Scanner } from './features/care/Scanner';
+import { WorkerDashboard } from './pages/WorkerDashboard';
+import { AdminDashboard } from './pages/adminDashboard';
+import { ClientDashboard } from './pages/clientDashboard';
+
+// Helper component to check permissions
+const RoleGuard = ({ component: Component, role }: { component: React.FC, role: string }) => {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading) return <div>Loading Application...</div>;
+  if (!user) return <Navigate to="/login" />;
+  if (user.role !== role) return <Navigate to="/login" />;
+
+  return <Component />;
+};
 
 export default function App() {
   return (
-    <AuthProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route path="/login" element={<Login />} />
-          
-          {/* Worker Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['WORKER']} />}>
-            <Route path="/worker" element={<Scanner />} />
-          </Route>
+    <MantineProvider>
+      <AuthProvider>
+        <BrowserRouter>
+          <Routes>
+            {/* PUBLIC */}
+            <Route path="/login" element={<Login />} />
 
-          {/* Client & Admin Mock Routes */}
-          <Route element={<ProtectedRoute allowedRoles={['CLIENT']} />}>
-            <Route path="/client" element={<div className="p-10">Client Dashboard</div>} />
-          </Route>
+            {/* PROTECTED WORKER */}
+            <Route path="/worker" element={<RoleGuard component={WorkerDashboard} role="WORKER" />} />
+            <Route path="/admin" element={<RoleGuard component={AdminDashboard} role="ADMIN" />} />
+            <Route path="/client" element={<RoleGuard component={ClientDashboard} role="CLIENT" />} />
 
-          <Route element={<ProtectedRoute allowedRoles={['ADMIN']} />}>
-            <Route path="/admin" element={<div className="p-10">Admin Control Panel</div>} />
-          </Route>
-
-          <Route path="/" element={<Navigate to="/login" />} />
-        </Routes>
-      </BrowserRouter>
-    </AuthProvider>
+            {/* FALLBACK */}
+            <Route path="*" element={<Navigate to="/login" />} />
+          </Routes>
+        </BrowserRouter>
+      </AuthProvider>
+    </MantineProvider>
   );
 }
