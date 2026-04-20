@@ -18,11 +18,13 @@
     "@uides/react-qr-reader": "^3.1.0",
     "@yudiel/react-qr-scanner": "^2.5.1",
     "axios": "^1.15.1",
+    "formik": "^2.4.9",
     "lucide-react": "^1.8.0",
     "react": "^19.2.5",
     "react-dom": "^19.2.5",
     "react-router-dom": "^7.14.1",
-    "tailwindcss": "^4.2.2"
+    "tailwindcss": "^4.2.2",
+    "yup": "^1.7.1"
   },
   "devDependencies": {
     "@eslint/js": "^9.39.4",
