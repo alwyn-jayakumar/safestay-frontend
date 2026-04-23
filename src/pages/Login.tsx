@@ -3,10 +3,11 @@ import * as Yup from 'yup';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../hooks/useAuth'; // Using the context we just made
 import { TextInput, PasswordInput, Button, Paper, Title, Container, Select, Stack } from '@mantine/core';
-
+import { usePost } from '../hooks/useApi';
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
+  const { execute: loginRequest, loading } = usePost('/auth/login');
 
   const formik = useFormik({
     initialValues: { email: '', password: '', role: 'WORKER' },
@@ -15,25 +16,27 @@ export function Login() {
       password: Yup.string().required('Required'),
       role: Yup.string().required('Required'),
     }),
-    onSubmit: async (values) => {
-      // 1. In production, call your FastAPI here:
-      // const response = await apiClient.post('/auth/login', values);
-      
-      // 2. For now, we mock the successful response from your MSSQL/FastAPI
-      const mockUser = { 
-        id: '101', 
-        name: 'Vijay', 
-        role: values.role, 
-        token: 'ey-your-jwt-token-from-fastapi' 
-      };
+    // Inside Login.tsx
+onSubmit: async (values) => {
+  const response = await loginRequest(values);
+  
+  if (response) {
+    // Combine token and user info into one object
+    const authData = {
+      ...response.user,           // id, name, role
+      token: response.access_token // The JWT token
+    };
 
-      login(mockUser); // This updates the state globally
+    // 1. Update Context & LocalStorage
+    login(authData);
 
-      // 3. Logic-based redirection
-      if (values.role === 'WORKER') navigate('/worker');
-      else if (values.role === 'ADMIN') navigate('/admin');
-      else navigate('/client');
-    },
+    // 2. Navigate based on the FRESH role from the response
+    const role = response.user.role;
+    if (role === 'ADMIN') navigate('/admin');
+    else if (role === 'WORKER') navigate('/worker');
+    else if (role === 'CLIENT') navigate('/client');
+  }
+},
   });
 
   return (

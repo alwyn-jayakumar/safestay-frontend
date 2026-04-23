@@ -1,105 +1,52 @@
-import { useState, useEffect } from 'react';
-import { 
-  Container, Text, Button, Card, Badge, Stack, 
-  Group, Timeline, ThemeIcon, Checkbox, Paper, Loader 
-} from '@mantine/core';
-import { IconScan, IconClock, IconMapPin, IconCheck } from '@tabler/icons-react';
-import { Scanner } from '../../features/care/Scanner';
-import { useFetch, usePut, usePost } from '../../hooks/useApi';
-import type { CareTask } from '../../types';
+import { Container, Title, Text, Paper, Badge, Group, Stack, Button, Alert } from '@mantine/core';
+import { useAuth } from '../../hooks/useAuth';
+import { IconAlertCircle, IconCheck, IconCalendar } from '@tabler/icons-react';
 
 export function WorkerDashboard() {
-  const [showScanner, setShowScanner] = useState(false);
+  const { user } = useAuth();
+
+  console.log(user,'user');
   
-  // 1. Fetch tasks from FastAPI
-  const { data: tasks, loading, refetch } = useFetch<CareTask[]>('/worker/tasks');
-  
-  // 2. Hooks for Actions
-  const { execute: updateTask } = usePut<any>('/worker/update-task');
-  const { execute: verifyVisit } = usePost<any>('/worker/verify-visit');
-
-  const handleVerification = async (data: { qr: string; coords: { lat: number; lng: number } }) => {
-    try {
-      await verifyVisit({ 
-        qr: data.qr, 
-        latitude: data.coords.lat, 
-        longitude: data.coords.lng 
-      });
-      alert("Check-in Verified by GPS!");
-      setShowScanner(false);
-      refetch(); // Refresh task list
-    } catch (err) {
-      alert("Verification Failed: You are not at the location.");
-    }
-  };
-
-  const handleTaskToggle = async (taskId: number, currentStatus: boolean) => {
-    try {
-      await updateTask({ id: taskId, isCompleted: !currentStatus });
-      refetch(); // Sync with MSSQL
-    } catch (err) {
-      alert("Failed to update task");
-    }
-  };
-
-  if (loading) return <Container py="xl" ta="center"><Loader size="xl" /></Container>;
-
   return (
-    <Container size="sm" py="xl">
+    <Container size="md" py="xl">
       <Stack gap="lg">
-        {/* Header */}
         <Group justify="space-between">
-          <Title order={3}>My Duty</Title>
-          <Badge color="green" variant="light" size="lg">Online</Badge>
+          <Title order={2}>Caregiver Portal</Title>
+          <Badge size="lg" color={user?.is_verified ? "green" : "orange"}>
+            {user?.is_verified ? "Verified Professional" : "Pending Verification"}
+          </Badge>
         </Group>
 
-        {/* Check-in Card */}
-        <Card withBorder radius="md" p="xl" bg="blue.0">
-          <Text fw={700} size="lg">Current Patient: Mr. Ramanathan</Text>
-          <Group gap={5} c="dimmed" mb="md">
-            <IconMapPin size={14} />
-            <Text size="xs">Kolathur, Chennai</Text>
-          </Group>
+        {/* 1. Show warning if not verified */}
+        {!user?.is_verified && (
+          <Alert variant="light" color="orange" title="Verification Required" icon={<IconAlertCircle />}>
+            Your documents are being reviewed by the SafeStay Admin. You will be able to accept tasks once approved.
+          </Alert>
+        )}
 
-          {!showScanner ? (
-            <Button 
-              fullWidth size="md" 
-              leftSection={<IconScan size={18} />} 
-              onClick={() => setShowScanner(true)}
-            >
-              Start Session (Scan QR)
-            </Button>
-          ) : (
-            <Scanner onVerified={handleVerification} />
-          )}
-        </Card>
-
-        {/* Task List Section */}
+        {/* 2. Profile Quick View */}
         <Paper withBorder p="md" radius="md">
-          <Text fw={700} mb="md">Daily Care Tasks</Text>
-          <Stack>
-            {tasks?.map((task) => (
-              <Group key={task.id} justify="space-between" p="xs" className="border-b last:border-0">
-                <Checkbox 
-                  checked={task.isCompleted} 
-                  onChange={() => handleTaskToggle(task.id, task.isCompleted)}
-                  label={
-                    <Stack gap={0}>
-                      <Text size="sm" fw={500} td={task.isCompleted ? 'line-through' : 'none'}>
-                        {task.title}
-                      </Text>
-                      <Text size="xs" c="dimmed">{task.timeSlot}</Text>
-                    </Stack>
-                  }
-                />
-                {task.isCompleted && <ThemeIcon color="green" variant="light" radius="xl" size="sm"><IconCheck size={12} /></ThemeIcon>}
-              </Group>
-            ))}
-          </Stack>
+          <Text size="sm" c="dimmed">Welcome back,</Text>
+          <Text size="xl" fw={700}>{user?.name}</Text>
+          <Text size="xs" mt={4}>Role: {user?.role} | ID: #00{user?.id}</Text>
         </Paper>
+
+        {/* 3. Task Placeholder (We will build the Task API next) */}
+        <Title order={3} mt="lg">Today's Schedule</Title>
+        {user?.is_verified ? (
+          <Paper withBorder p="xl" radius="md" style={{ textAlign: 'center' }}>
+            <IconCalendar size={48} stroke={1.5} color="gray" />
+            <Text fw={500} mt="md">No tasks assigned for today.</Text>
+            <Text size="sm" c="dimmed">New patient requests will appear here.</Text>
+          </Paper>
+        ) : (
+          <Text c="dimmed">Finish verification to view your schedule.</Text>
+        )}
+
+        <Button fullWidth variant="light" color="blue" disabled={!user?.is_verified}>
+          Check-in for Duty
+        </Button>
       </Stack>
     </Container>
   );
 }
-
-import { Title } from '@mantine/core';

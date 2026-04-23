@@ -78,13 +78,10 @@ export function Signup() {
       }
 
       try {
-        await register(formData, {
-          headers: { 'Content-Type': 'multipart/form-data' }
-        });
-        alert("Registration Successful! Admin will review your ID.");
+        await register(formData);
         navigate('/login');
       } catch (err) {
-        alert("Registration failed: " + err);
+        console.log("Registration failed: " + err);
       }
     },
   });
