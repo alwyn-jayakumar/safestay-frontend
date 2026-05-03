@@ -1,4 +1,4 @@
-import { Table, Button, Image, Badge, Group, Title, Text } from '@mantine/core';
+import { Table, Button, Image, Group, Title, Text } from '@mantine/core';
 import { useDelete, useFetch } from '../../hooks/useApi';
 import { apiClient } from '../../api/client';
 import { toast } from '../../utils/toaster';

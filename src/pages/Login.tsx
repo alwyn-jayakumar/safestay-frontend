@@ -7,7 +7,7 @@ import { usePost } from '../hooks/useApi';
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
-  const { execute: loginRequest, loading } = usePost('/auth/login');
+  const { execute: loginRequest } = usePost('/auth/login');
 
   const formik = useFormik({
     initialValues: { email: '', password: '', role: 'WORKER' },

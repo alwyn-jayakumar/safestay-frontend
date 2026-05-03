@@ -1,4 +1,4 @@
-import { Container, Grid, Paper, Text, Group, Button, Title, Stack, Card } from '@mantine/core';
+import { Container, Grid, Paper, Text, Group, Button, Title, Card } from '@mantine/core';
 import { useNavigate } from 'react-router-dom';
 import { useFetch } from '../../hooks/useApi';
 import { IconUsers, IconUserCheck, IconClock } from '@tabler/icons-react';
@@ -7,7 +7,7 @@ export function AdminDashboard() {
   const navigate = useNavigate();
   
   // 1. Fetch real summary data (We'll create this backend endpoint next)
-  const { data: stats, loading } = useFetch<any>('/admin/stats');
+  const { data: stats } = useFetch<any>('/admin/stats');
   
 
   return (
