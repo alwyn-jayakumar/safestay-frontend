@@ -1,11 +1,11 @@
 import { useState, useEffect } from 'react';
-import { Container, Title, Paper, Group, Button, Text, Stack, Card, Badge, Timeline, Divider, Textarea, Select } from '@mantine/core';
+import { Container, Title, Paper, Group, Button, Text, Stack, Card, Badge, Timeline, Divider, Textarea, Select, FileInput } from '@mantine/core';
 import { useAuth } from '../hooks/useAuth';
-import { useFetch, usePost } from '../hooks/useApi';
 import { Scanner } from '../features/care/Scanner';
 import { IconClock, IconMapPin, IconCheck, IconPlus, IconPlayerStop, IconQrcode } from '@tabler/icons-react';
 import type { Task, Shift, ActivityLog } from '../types';
 import { toast } from '../utils/toaster';
+import { getMockTasks, saveMockTasks } from '../data/mockData';
 
 interface ShiftControlPanelProps {
   taskId: string;
@@ -15,38 +15,41 @@ interface ShiftControlPanelProps {
 export function ShiftControlPanel({ taskId, onComplete }: ShiftControlPanelProps) {
   const { user } = useAuth();
   const [shift, setShift] = useState<Shift | null>(null);
+  const [task, setTask] = useState<Task | null>(null);
+  const [activityLogs, setActivityLogs] = useState<ActivityLog[]>([]);
   const [elapsedTime, setElapsedTime] = useState(0);
   const [isActive, setIsActive] = useState(false);
   const [showScanner, setShowScanner] = useState(false);
   const [activityType, setActivityType] = useState<'MEDICINE' | 'FOOD' | 'ACTIVITY'>('MEDICINE');
   const [activityDescription, setActivityDescription] = useState('');
-
-  // Fetch task details
-  const { data: task } = useFetch<Task>(`/tasks/${taskId}`);
-
-  // Fetch current shift if exists
-  const { data: currentShift, refetch: refetchShift } = useFetch<Shift>(`/shifts/active/${taskId}`);
-
-  // Fetch activity logs
-  const { data: activityLogs, refetch: refetchLogs } = useFetch<ActivityLog[]>(`/shifts/${currentShift?.id}/logs`);
-
-  // API calls
-  const { execute: startShift } = usePost('/shifts/start');
-  const { execute: endShift } = usePost('/shifts/end');
-  const { execute: logActivity } = usePost('/activities/log');
+  const [statusImage, setStatusImage] = useState<File | null>(null);
+  const [statusNotes, setStatusNotes] = useState('');
+  const [isSubmittingStatus, setIsSubmittingStatus] = useState(false);
 
   useEffect(() => {
-    if (currentShift) {
-      setShift(currentShift);
-      setIsActive(currentShift.status === 'ACTIVE');
-      // Calculate elapsed time if active
-      if (currentShift.status === 'ACTIVE') {
-        const start = new Date(currentShift.start_time).getTime();
-        const now = Date.now();
-        setElapsedTime(Math.floor((now - start) / 1000 / 60)); // minutes
+    const mockTasks = getMockTasks();
+    const foundTask = mockTasks.find((item) => item.id === taskId) ?? null;
+    setTask(foundTask);
+
+    if (typeof window !== 'undefined') {
+      const savedShift = window.localStorage.getItem(`safestay_shift_${taskId}`);
+      if (savedShift) {
+        const parsedShift = JSON.parse(savedShift) as Shift;
+        setShift(parsedShift);
+        setIsActive(parsedShift.status === 'ACTIVE');
+        if (parsedShift.status === 'ACTIVE') {
+          const start = new Date(parsedShift.start_time).getTime();
+          const now = Date.now();
+          setElapsedTime(Math.floor((now - start) / 1000 / 60));
+        }
+      }
+
+      const savedLogs = window.localStorage.getItem(`safestay_logs_${taskId}`);
+      if (savedLogs) {
+        setActivityLogs(JSON.parse(savedLogs) as ActivityLog[]);
       }
     }
-  }, [currentShift]);
+  }, [taskId]);
 
   useEffect(() => {
     let interval: number;
@@ -62,29 +65,44 @@ export function ShiftControlPanel({ taskId, onComplete }: ShiftControlPanelProps
 
   const handleScanVerified = async (data: { qr: string; coords: { lat: number; lng: number } }) => {
     try {
-      if (!task) return;
+      const mockTask = task ?? getMockTasks().find((item) => item.id === taskId) ?? null;
+      if (!mockTask) {
+        toast.error("Task Not Found", "The selected task could not be loaded.");
+        return;
+      }
 
-      // Verify QR matches task
-      if (data.qr !== task.qr_token) {
+      if (data.qr !== mockTask.qr_token) {
         toast.error("Invalid QR Code", "This QR code doesn't match the assigned task.");
         return;
       }
 
-      // Start the shift
-      const shiftData = await startShift({
+      const workerId = String(user?.id ?? 'worker-1');
+      const mockShift: Shift = {
+        id: `shift-${Date.now()}`,
         task_id: taskId,
-        worker_id: user?.id,
-        client_id: task.client_id,
-        qr_verified: true,
+        worker_id: workerId,
+        client_id: mockTask.client_id,
+        start_time: new Date().toISOString(),
+        status: 'ACTIVE',
         location_verified: true,
-        start_coords: data.coords,
-      });
+        qr_verified: true,
+      };
 
-      setShift(shiftData);
+      setShift(mockShift);
       setIsActive(true);
       setShowScanner(false);
+      setElapsedTime(0);
+
+      const updatedTasks = getMockTasks().map((item) =>
+        item.id === taskId ? { ...item, status: 'IN_PROGRESS' as Task['status'], worker_id: mockShift.worker_id } : item,
+      );
+      saveMockTasks(updatedTasks);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`safestay_shift_${taskId}`, JSON.stringify(mockShift));
+      }
+
       toast.success("Shift Started", "Your caregiving session has begun. Timer is running.");
-      refetchShift();
     } catch (err) {
       toast.error("Error", "Could not start shift. Please try again.");
     }
@@ -94,8 +112,25 @@ export function ShiftControlPanel({ taskId, onComplete }: ShiftControlPanelProps
     try {
       if (!shift) return;
 
-      await endShift({ shift_id: shift.id });
+      const completedShift: Shift = {
+        ...shift,
+        end_time: new Date().toISOString(),
+        status: 'COMPLETED',
+      };
+
+      setShift(completedShift);
       setIsActive(false);
+      setElapsedTime(0);
+
+      const updatedTasks = getMockTasks().map((item) =>
+        item.id === taskId ? { ...item, status: 'COMPLETED' as Task['status'] } : item,
+      );
+      saveMockTasks(updatedTasks);
+
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`safestay_shift_${taskId}`, JSON.stringify(completedShift));
+      }
+
       toast.success("Shift Completed", "Generating summary report...");
       onComplete();
     } catch (err) {
@@ -107,18 +142,65 @@ export function ShiftControlPanel({ taskId, onComplete }: ShiftControlPanelProps
     try {
       if (!shift || !activityDescription.trim()) return;
 
-      await logActivity({
+      const newLog: ActivityLog = {
+        id: `log-${Date.now()}`,
         shift_id: shift.id,
         type: activityType,
         description: activityDescription,
         timestamp: new Date().toISOString(),
-      });
+      };
+
+      const nextLogs = [newLog, ...activityLogs];
+      setActivityLogs(nextLogs);
+      if (typeof window !== 'undefined') {
+        window.localStorage.setItem(`safestay_logs_${taskId}`, JSON.stringify(nextLogs));
+      }
 
       setActivityDescription('');
-      refetchLogs();
       toast.success("Activity Logged", "Care activity has been recorded.");
     } catch (err) {
       toast.error("Error", "Could not log activity. Please try again.");
+    }
+  };
+
+  const handleStatusUpdate = async () => {
+    try {
+      if (!shift) return;
+
+      if (!statusImage && !statusNotes.trim()) {
+        toast.error("Missing Details", "Please attach an image or add a note before sending an update.");
+        return;
+      }
+
+      setIsSubmittingStatus(true);
+      const formData = new FormData();
+      if (statusImage) {
+        formData.append('file', statusImage);
+      }
+      formData.append('notes', statusNotes.trim() || 'Optional notes about status');
+
+      const token = user?.token;
+      const response = await fetch(`${import.meta.env.VITE_API_URL || 'http://127.0.0.1:8000'}/api/shifts/${shift.id}/status-update`, {
+        method: 'POST',
+        body: formData,
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        throw new Error(errorData?.message || 'Could not send shift status update');
+      }
+
+      setStatusImage(null);
+      setStatusNotes('');
+      toast.success("Status Update Sent", "Your shift status update was uploaded successfully.");
+    } catch (err) {
+      const message = err instanceof Error ? err.message : 'Could not send status update';
+      toast.error("Error", message);
+    } finally {
+      setIsSubmittingStatus(false);
     }
   };
 
@@ -222,6 +304,36 @@ export function ShiftControlPanel({ taskId, onComplete }: ShiftControlPanelProps
                   disabled={!activityDescription.trim()}
                 >
                   Log Activity
+                </Button>
+              </Stack>
+            </Card>
+
+            <Card withBorder p="md">
+              <Stack>
+                <Text fw={600}>Send Shift Status Update</Text>
+                <Text size="sm" c="dimmed">
+                  Attach an image and optional notes to update the current shift status.
+                </Text>
+                <FileInput
+                  label="Upload image"
+                  placeholder="Choose a file"
+                  accept="image/*"
+                  value={statusImage}
+                  onChange={setStatusImage}
+                />
+                <Textarea
+                  label="Notes"
+                  placeholder="Optional notes about status"
+                  value={statusNotes}
+                  onChange={(e) => setStatusNotes(e.target.value)}
+                  minRows={2}
+                />
+                <Button
+                  onClick={handleStatusUpdate}
+                  loading={isSubmittingStatus}
+                  disabled={!statusImage && !statusNotes.trim()}
+                >
+                  Send Status Update
                 </Button>
               </Stack>
             </Card>

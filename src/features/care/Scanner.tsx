@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { Scanner as QrScanner,  } from '@yudiel/react-qr-scanner';
-import type{ IDetectedBarcode } from '@yudiel/react-qr-scanner';
+import { Scanner as QrScanner } from '@yudiel/react-qr-scanner';
+import type { IDetectedBarcode } from '@yudiel/react-qr-scanner';
 import { useGeolocation } from '../../hooks/useGeolocation';
 
 interface ScannerProps {
@@ -10,22 +10,31 @@ interface ScannerProps {
 export const Scanner = ({ onVerified }: ScannerProps) => {
   const { location, getLocation, error: gpsError } = useGeolocation();
   const [isVerifying, setIsVerifying] = useState(false);
+  const [demoQr, setDemoQr] = useState('');
 
   const handleScan = (detectedCodes: IDetectedBarcode[]) => {
     if (detectedCodes.length > 0 && location && !isVerifying) {
       setIsVerifying(true);
       const qrValue = detectedCodes[0].rawValue;
-      
-      console.log("Match found! Verifying location...");
       onVerified({ qr: qrValue, coords: location });
     }
+  };
+
+  const handleDemoSubmit = () => {
+    if (!location) {
+      getLocation();
+      return;
+    }
+
+    setIsVerifying(true);
+    onVerified({ qr: demoQr || 'SAFE-101', coords: location });
   };
 
   return (
     <div className="p-6 flex flex-col items-center max-w-md mx-auto">
       <div className="text-center mb-6">
         <h2 className="text-2xl font-bold text-slate-800">Caregiver Check-in</h2>
-        <p className="text-slate-500 text-sm">Position the patient's QR code in the frame</p>
+        <p className="text-slate-500 text-sm">Scan the patient QR code or use the demo code below during local testing.</p>
       </div>
       
       {!location ? (
@@ -39,17 +48,35 @@ export const Scanner = ({ onVerified }: ScannerProps) => {
           </button>
         </div>
       ) : (
-        <div className="relative w-full aspect-square overflow-hidden rounded-3xl border-4 border-white shadow-2xl bg-black">
-          <QrScanner
-            onScan={handleScan}
-            onError={(error) => console.error(error)}
-            constraints={{ facingMode: 'environment' }}
-          />
-          {/* Visual Overlay */}
-          <div className="absolute inset-0 border-[40px] border-black/30 pointer-events-none">
-            <div className="w-full h-full border-2 border-blue-400 rounded-xl animate-pulse" />
+        <>
+          <div className="relative w-full aspect-square overflow-hidden rounded-3xl border-4 border-white shadow-2xl bg-black">
+            <QrScanner
+              onScan={handleScan}
+              onError={(error) => console.error(error)}
+              constraints={{ facingMode: 'environment' }}
+            />
+            <div className="absolute inset-0 border-[40px] border-black/30 pointer-events-none">
+              <div className="w-full h-full border-2 border-blue-400 rounded-xl animate-pulse" />
+            </div>
           </div>
-        </div>
+
+          <div className="mt-4 w-full rounded-2xl border border-slate-200 bg-slate-50 p-4 text-left">
+            <p className="mb-2 text-sm font-semibold text-slate-700">Demo QR shortcut</p>
+            <p className="mb-2 text-xs text-slate-500">Use the demo code below if you cannot scan a real QR in the browser.</p>
+            <input
+              value={demoQr}
+              onChange={(e) => setDemoQr(e.target.value)}
+              placeholder="SAFE-101"
+              className="w-full rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <button
+              onClick={handleDemoSubmit}
+              className="mt-3 w-full rounded-lg bg-emerald-600 px-3 py-2 text-sm font-semibold text-white"
+            >
+              Submit Demo QR
+            </button>
+          </div>
+        </>
       )}
       
       {gpsError && (

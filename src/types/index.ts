@@ -51,12 +51,20 @@ export interface Task {
   location: string;
   client_id: string;
   worker_id?: string;
-  status: 'PENDING' | 'ASSIGNED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
+  status: 'PENDING' | 'ACCEPTED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED';
   qr_token?: string;
   medical_instructions?: MedicalInstruction[];
   created_at: string;
   assigned_at?: string;
   completed_at?: string;
+  client_name?: string;
+  patient_name?: string;
+  patient_age?: number;
+  fee?: number;
+  documents?: string[];
+  location_coords?: LocationCoords;
+  reminder_required?: boolean;
+  latest_update?: string;
 }
 
 export interface Shift {

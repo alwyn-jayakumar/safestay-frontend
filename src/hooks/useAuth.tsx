@@ -1,11 +1,12 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { apiClient } from '../api/client';
+import type { UserRole } from '../types';
 
 export interface User {
   id: number;
   name: string;
   email: string;
-  role: string;
+  role: UserRole;
   token: string;
   is_verified?: boolean;
 }
