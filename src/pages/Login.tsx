@@ -5,6 +5,7 @@ import { useAuth } from '../hooks/useAuth';
 import { TextInput, PasswordInput, Button, Paper, Title, Container, Select, Stack } from '@mantine/core';
 import { getDemoUser } from '../data/mockData';
 
+
 export function Login() {
   const { login } = useAuth();
   const navigate = useNavigate();
@@ -58,6 +59,7 @@ export function Login() {
               error={formik.touched.password && formik.errors.password}
             />
             <Button type="submit" fullWidth mt="md">Login</Button>
+            <p>Don't have an account? <span className="text-blue-500 cursor-pointer" onClick={() => navigate('/signup')}>Register</span></p>
           </Stack>
         </form>
       </Paper>
